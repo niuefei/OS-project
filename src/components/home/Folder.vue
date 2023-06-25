@@ -9,21 +9,42 @@
       class="el-menu-vertical-demo"
       @close="handleClose"
     >
-      <el-sub-menu class="folder" v-for="item in folder" :key="item">
+      <el-sub-menu
+        :index="item.folderId"
+        class="folder"
+        v-for="item in folder"
+        :key="item"
+      >
         <template #title>
           <img src="../../assets/images/folder.png" alt="" class="folder_img" />
           <span>{{ item.folderName }}</span>
           <el-button
             class="add_file_btn"
             type="default"
-            @click="handleAddFile(item)"
+            @click.stop="handleAddFile(item)"
             v-if="loginUser.id == item.userId"
             >新建文件</el-button
           >
         </template>
-        <el-menu-item v-for="item2 in item.files" :key="item2">
+        <el-menu-item
+          v-for="item2 in item.files"
+          :key="item2"
+          @click="handleOpenFile(item2)"
+        >
           <img src="../../assets/images/file.png" alt="" class="file_img" />
           <span>{{ item2.fileName }}</span>
+          <el-button
+            class="rename_file_btn"
+            v-if="loginUser.id == item2.userId"
+            @click.stop="handleRename(item2)"
+            >重命名</el-button
+          >
+          <el-button
+            class="delete_file_btn"
+            v-if="loginUser.id == item2.userId"
+            @click.stop="handleDeleteFile(item2)"
+            >删除文件</el-button
+          >
         </el-menu-item>
       </el-sub-menu>
     </el-menu>
@@ -93,7 +114,7 @@
     </div>
     <div class="add_folder_wrapper" v-if="isShowAddFolder">
       <div class="add_folder_content">
-        <div class="close" @click="isShowAddFolder=false">×</div>
+        <div class="close" @click="isShowAddFolder = false">×</div>
         <div class="ipt_wrapper">
           <span>文件夹名</span>
           <el-input
@@ -102,10 +123,15 @@
             placeholder="Please input"
           />
         </div>
-        <el-button type="primary" @click="handleAddFolder" class="add_folder_btn">确认</el-button>
-        
+        <el-button
+          type="primary"
+          @click="handleAddFolder"
+          class="add_folder_btn"
+          >确认</el-button
+        >
       </div>
     </div>
+    <div class="rename_file_wrapper"></div>
   </div>
 </template>
 
@@ -116,7 +142,8 @@ import { storeToRefs } from "pinia";
 
 import { ElMessage } from "element-plus";
 const store = mainStore();
-let { folder, isLogin, loginUser, storageData } = storeToRefs(store);
+let { folder, isLogin, loginUser, storageData } =
+  storeToRefs(store);
 
 let isShowAddFile = ref(false);
 let isShowSelectStorage = ref(false);
@@ -131,7 +158,7 @@ let activeAddress = ref(null);
 
 // 添加文件夹相关
 let isShowAddFolder = ref(false);
-let folderName = ref(null)
+let folderName = ref(null);
 // 添加文件相关函数
 function handleAddFile(item) {
   isShowAddFile.value = true;
@@ -190,7 +217,7 @@ function confirmAddFile() {
       if (item.folderId == activeFolderId.value) {
         let newFile = {
           fileName: fileName.value,
-          userId: loginUser.id,
+          userId: loginUser.value.id,
           folderId: activeFolderId.value,
           content: fileContent.value,
           size: fileSize.value,
@@ -233,24 +260,67 @@ function confirmAddFile() {
 
 //添加文件夹相关函数
 function handleAddFolder() {
-  if(!folderName.value) {
+  if (!folderName.value) {
     ElMessage({
-        message: "请输入文件夹名",
-        type: "warning",
-      });
-  }
-  
-  else {
+      message: "请输入文件夹名",
+      type: "warning",
+    });
+  } else {
     console.log(loginUser.value);
     // 添加文件夹
     let newFolder = {
       folderName: folderName.value,
       userId: loginUser.value.id,
       folderId: folder.value.length,
-      files: []
+      files: [],
+    };
+    folder.value.push(newFolder);
+    isShowAddFolder.value = false;
+    ElMessage({
+      message: "新建文件夹完成",
+      type: "success",
+    });
+  }
+}
+
+// 文件重命名
+function handleRename(data) {
+  console.log("文件重命名");
+}
+// 打开文件
+function handleOpenFile(data) {
+  
+  // 判断保护码
+  if(data.protectedCode == 2 && loginUser.value.id!=data.userId) {
+    ElMessage({
+      message: "文件设置为不可读",
+      type: "warning",
+    });
+  }
+  else {
+    // 找到对应的文件
+    for(let i = 0 ; i < folder.value[data.folderId].files.length ; i++ ){
+      if(folder.value[data.folderId].files[i].fileName == data.fileName) {
+        // 打开
+        // 这里使用排他思想，将所有文件关闭，然后打开对应的文件
+        closeAllFiles()
+        folder.value[data.folderId].files[i].isOpen = true
+        console.log(folder.value);
+      }
     }
-    folder.value.push(newFolder)
-    isShowAddFolder.value = false
+
+    ElMessage({
+      message: "文件打开成功",
+      type: "success",
+    });
+  }
+}
+// 关闭所有文件
+function closeAllFiles() {
+  for(let i = 0 ; i < folder.value.length ; i++) {
+    for(let j = 0 ; j < folder.value[i].files.length ; j++) {
+      folder.value[i].files[j].isOpen = false
+    }
   }
 }
 </script>

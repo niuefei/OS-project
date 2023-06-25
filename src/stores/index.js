@@ -69,6 +69,8 @@ export const mainStore = defineStore("main", {
           ],
         },
       ],
+      // 正在打开的文件
+      activeFile: null,
 
       // 存储信息
       storageData: null

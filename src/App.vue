@@ -7,13 +7,18 @@
 
 <script setup>
 import { storage } from "@/utils/storageData.js";
-import {ref , onMounted } from "vue"
+import {ref , onMounted , watch } from "vue"
 import { mainStore } from '@/stores/index'
 import { storeToRefs } from 'pinia'
 const store = mainStore()
 let { isLogin , loginUserId  , loginUser, folder , storageData } = storeToRefs(store)
 
-
+watch(folder, (newValue, oldValue) => {
+  upDateStorageData()
+} ,{
+  deep: true,
+  immediate: true
+});
 function upDateStorageData() {
   storageData.value = storage
   for(let i = 0 ; i < folder.value.length ; i++) {
@@ -40,12 +45,9 @@ function upDateStorageData() {
     }
   }
 }
-upDateStorageData()
+
 
 </script>
 
 <style lang="scss" scoped>
-.view {
-  
-}
 </style>
