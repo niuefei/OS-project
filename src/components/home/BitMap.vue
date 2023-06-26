@@ -93,7 +93,9 @@ function itemClass(data) {
   width: 48%;
   height: 750px;
   .title {
+    margin-top: 10px;
     margin-left: 20px;
+    font-weight: 800;
   }
   .title2 {
     display: flex;
@@ -108,14 +110,14 @@ function itemClass(data) {
       border-radius: 15px;
       margin-left: 30px;
       transform: translateY(5px);
-
     }
   }
   .form_wrapper {
     position: absolute;
     left: 50%;
-    width: 685px;
-    border: 1px solid red;
+    width: 682px;
+    border-bottom: 1px solid red;
+    border-right: 1px solid red;
     transform: translateX(-50%);
     .form_title {
       display: flex;

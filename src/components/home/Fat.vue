@@ -41,6 +41,12 @@ function nextNumber(data) {
   border: 1px solid #333;
   width: 48%;
   height: 500px;
+  .title {
+    margin-top: 10px;
+    margin-left: 30px;
+    font-size: 20px;
+    font-weight: 800;
+  }
   .form_wrapper {
     position: relative;
     left: 20%;

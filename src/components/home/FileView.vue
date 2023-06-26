@@ -2,6 +2,7 @@
   <div class="container">
     <div class="close" @click="handleClose">×</div>
     <div class="title">打开文件：{{ viewData.fileName }}</div>
+    <div class="title" v-if="isFileOpen2()">当前文件目录：{{ viewData.folderName+' / '+viewData.fileName }}</div>
     <div class="file_data">
       <span>所属用户： {{ viewData.userId }}</span>
       <span>文件大小：{{ viewData.size }}</span>
@@ -11,14 +12,14 @@
     <div class="modify_wrapper">
       <el-button
         type="primary"
-        v-if="viewData.protectedCode == 0 || loginUser.id == viewData.userId"
+        v-if="(viewData.protectedCode == 0 || loginUser.id == viewData.userId) && isFileOpen2()"
         class="modify_btn"
         @click="handleModify"
         >修改文件</el-button
       >
       <textarea
         class="modify_text"
-        v-if="viewData.protectedCode == 0 || loginUser.id == viewData.userId"
+        v-if="(viewData.protectedCode == 0 || loginUser.id == viewData.userId) && isFileOpen2()"
         v-model="activeContent"
       ></textarea>
     </div>
@@ -61,6 +62,7 @@ function fileDataFormal() {
       address: "",
       isopen: false,
       protectedCode: 0,
+      folderName: ""
     };
   } else {
     // 设置地址
@@ -75,8 +77,21 @@ function isFileOpen() {
       if (folder.value[i].files[j].isOpen) {
         let data1 = JSON.stringify(folder.value[i].files[j]);
         let data2 = JSON.parse(data1);
+        let folderData1 = JSON.stringify(folder.value[i])
+        let folderData2 = JSON.parse(folderData1)
         viewData.value = data2;
+        viewData.value.folderName = folderData2.folderName
         activeContent.value = folder.value[i].files[j].content;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function isFileOpen2() {
+  for (let i = 0; i < folder.value.length; i++) {
+    for (let j = 0; j < folder.value[i].files.length; j++) {
+      if (folder.value[i].files[j].isOpen) {
         return true;
       }
     }
@@ -109,6 +124,9 @@ function closeAllFiles() {
 
 // 修改文件
 function handleModify() {
+  if(!isLogin.value) {
+
+  }
   for (let i = 0; i < folder.value.length; i++) {
     for (let j = 0; j < folder.value[i].files.length; j++) {
       if (folder.value[i].files[j].isOpen) {

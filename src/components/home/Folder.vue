@@ -131,7 +131,20 @@
         >
       </div>
     </div>
-    <div class="rename_file_wrapper"></div>
+    <div class="rename_file_wrapper" v-if="isShowRename">
+      <div class="rename_file_content">
+        <div class="close" @click="isShowRename = false">×</div>
+        <span>输入文件名：</span>
+        <el-input
+          class="rename_ipt"
+          v-model="renameIptContent"
+          placeholder="Please input"
+        />
+        <el-button class="rename_btn" @click="confirmRename" type="primary"
+          >确认</el-button
+        >
+      </div>
+    </div>
   </div>
 </template>
 
@@ -142,8 +155,7 @@ import { storeToRefs } from "pinia";
 
 import { ElMessage } from "element-plus";
 const store = mainStore();
-let { folder, isLogin, loginUser, storageData } =
-  storeToRefs(store);
+let { folder, isLogin, loginUser, storageData } = storeToRefs(store);
 
 let isShowAddFile = ref(false);
 let isShowSelectStorage = ref(false);
@@ -156,6 +168,10 @@ let fileContent = ref(null);
 let storageBlockNum = ref(null);
 let activeAddress = ref(null);
 
+//文件重命名相关
+let isShowRename = ref(false);
+let activeRenameFile = ref(null);
+let renameIptContent = ref(null);
 // 添加文件夹相关
 let isShowAddFolder = ref(false);
 let folderName = ref(null);
@@ -167,6 +183,21 @@ function handleAddFile(item) {
 function handleClose() {
   isShowAddFile.value = false;
 }
+function isNumeric(str) {
+  return /^\d+$/.test(str);
+}
+function isSizeAllow(data) {
+  let num = 0;
+  for (let i = 0; i < storageData.value.length; i++) {
+    if (storageData.value[i].status == 0) {
+      num++;
+    }
+  }
+  if (data > num * 4) {
+    return false;
+  }
+  return true;
+}
 function handleSubmit() {
   if (!fileName.value || !fileContent.value || !fileSize.value) {
     ElMessage({
@@ -174,11 +205,30 @@ function handleSubmit() {
       type: "warning",
     });
   } else {
-    // 先分配内存
-    isShowAddFile.value = false;
-    isShowSelectStorage.value = true;
-    storageBlockNum.value = Math.ceil(fileSize.value / 4);
-    activeAddress.value = new Array();
+    console.log(fileSize.value);
+    console.log(isNumeric(fileSize.value));
+    if (!isNumeric(fileSize.value)) {
+      // 控制纯数字
+      ElMessage({
+        message: "文件大小填写格式不正确",
+        type: "warning",
+      });
+    } else {
+      // 控制大小
+      let num = Number(fileSize.value);
+      if (!isSizeAllow(num)) {
+        ElMessage({
+          message: "内存不足",
+          type: "warning",
+        });
+      } else {
+        // 先分配内存
+        isShowAddFile.value = false;
+        isShowSelectStorage.value = true;
+        storageBlockNum.value = Math.ceil(fileSize.value / 4);
+        activeAddress.value = new Array();
+      }
+    }
   }
 }
 function confirmAddFile() {
@@ -210,6 +260,7 @@ function confirmAddFile() {
     }
   });
   if (isAllow) {
+    console.log(activeAddress.value);
     // 到这里，万事俱备
     // 新建文件
     folder.value.forEach((item) => {
@@ -285,26 +336,48 @@ function handleAddFolder() {
 
 // 文件重命名
 function handleRename(data) {
-  console.log("文件重命名");
+  isShowRename.value = true;
+  //找到文件
+  for (let i = 0; i < folder.value.length; i++) {
+    for (let j = 0; j < folder.value[i].files.length; j++) {
+      if (folder.value[i].files[j].fileName == data.fileName) {
+        activeRenameFile.value = folder.value[i].files[j];
+        renameIptContent.value = activeRenameFile.value.fileName;
+      }
+    }
+  }
+}
+function confirmRename() {
+  if (renameIptContent.value == "") {
+    ElMessage({
+      message: "文件名不可为空",
+      type: "warning",
+    });
+  } else {
+    activeRenameFile.value.fileName = renameIptContent.value;
+    isShowRename.value = false;
+    ElMessage({
+      message: "修改成功",
+      type: "success",
+    });
+  }
 }
 // 打开文件
 function handleOpenFile(data) {
-  
   // 判断保护码
-  if(data.protectedCode == 2 && loginUser.value.id!=data.userId) {
+  if (data.protectedCode == 2 && loginUser.value.id != data.userId) {
     ElMessage({
       message: "文件设置为不可读",
       type: "warning",
     });
-  }
-  else {
+  } else {
     // 找到对应的文件
-    for(let i = 0 ; i < folder.value[data.folderId].files.length ; i++ ){
-      if(folder.value[data.folderId].files[i].fileName == data.fileName) {
+    for (let i = 0; i < folder.value[data.folderId].files.length; i++) {
+      if (folder.value[data.folderId].files[i].fileName == data.fileName) {
         // 打开
         // 这里使用排他思想，将所有文件关闭，然后打开对应的文件
-        closeAllFiles()
-        folder.value[data.folderId].files[i].isOpen = true
+        closeAllFiles();
+        folder.value[data.folderId].files[i].isOpen = true;
         console.log(folder.value);
       }
     }
@@ -317,9 +390,41 @@ function handleOpenFile(data) {
 }
 // 关闭所有文件
 function closeAllFiles() {
-  for(let i = 0 ; i < folder.value.length ; i++) {
-    for(let j = 0 ; j < folder.value[i].files.length ; j++) {
-      folder.value[i].files[j].isOpen = false
+  for (let i = 0; i < folder.value.length; i++) {
+    for (let j = 0; j < folder.value[i].files.length; j++) {
+      folder.value[i].files[j].isOpen = false;
+    }
+  }
+}
+
+// 删除文件
+function handleDeleteFile(data) {
+  console.log(data.address);
+  for (let i = 0; i < folder.value.length; i++) {
+    for (let j = 0; j < folder.value[i].files.length; j++) {
+      if (folder.value[i].files[j].fileName == data.fileName) {
+        // 在目录中删除
+        folder.value[i].files.splice(j, 1);
+
+        // 清除内存
+        console.log(data);
+        console.log(storageData.value);
+        for (let t = 0; t < data.address.length; t++) {
+          for (let k = 0; k < storageData.value.length; k++) {
+            if (data.address[t] == k) {
+              storageData.value[k].status = 0;
+              storageData.value[k].nextNumber = null;
+              storageData.value[k].file = null;
+              break;
+            }
+          }
+        }
+        ElMessage({
+          message: "删除成功",
+          type: "success",
+        });
+        return;
+      }
     }
   }
 }
@@ -352,6 +457,14 @@ function closeAllFiles() {
     }
     .add_file_ipt {
       width: 200px;
+    }
+    .rename_file_btn {
+      position: absolute;
+      right: 50px;
+    }
+    .delete_file_btn {
+      position: absolute;
+      right: 130px;
     }
   }
 }
@@ -512,6 +625,41 @@ function closeAllFiles() {
       margin-left: 50%;
       width: 70px;
       transform: translateX(-50%);
+    }
+  }
+}
+.rename_file_wrapper {
+  position: absolute;
+  left: 50%;
+  width: 500px;
+  height: 150px;
+  border: 1px solid #333;
+  border-radius: 15px;
+  background-color: #fff;
+  transform: translateX(-50%);
+  .rename_file_content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    span {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    .rename_ipt {
+      margin-bottom: 5px;
+    }
+    .rename_btn {
+      width: 70px;
+    }
+    .close {
+      position: absolute;
+      top: 0px;
+      right: 20px;
+      font-size: 30px;
+      cursor: pointer;
     }
   }
 }
